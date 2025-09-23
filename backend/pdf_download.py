@@ -12,6 +12,7 @@ BUCKET_NAME = "pdfs"
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
+
 def make_safe_name(url: str) -> str:
     # Generate a short hash from the URL
     h = hashlib.sha1(url.encode()).hexdigest()[:12]
