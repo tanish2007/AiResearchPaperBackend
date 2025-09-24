@@ -22,22 +22,20 @@ current_pdf_url = None
 current_pdf_path = None
 model_loading = False
 
+
 # def download_pdf(url: str) -> str:
 #     os.makedirs("pdfs", exist_ok=True)
 #     safe_name = make_safe_name(url)
 #     local_path = os.path.join("pdfs", safe_name)
 
-#     # Try download from Supabase
+#     # Delete any existing PDF in the bucket
 #     try:
-#         data = supabase.storage.from_(BUCKET_NAME).download(safe_name)
-#         if data:
-#             content = data.read() if hasattr(data, "read") else data
-#             with open(local_path, "wb") as f:
-#                 f.write(content)
-#             logging.info(f"Downloaded PDF from Supabase: {safe_name}")
-#             return local_path
+#         existing_files = supabase.storage.from_(BUCKET_NAME).list()
+#         for file in existing_files:
+#             supabase.storage.from_(BUCKET_NAME).remove(file['name'])
+#             logging.info(f"Deleted old PDF from Supabase: {file['name']}")
 #     except Exception as e:
-#         logging.info(f"PDF not found in bucket: {safe_name}, will download from URL. {e}")
+#         logging.warning(f"Could not list/delete old PDFs: {e}")
 
 #     # Download from original URL
 #     import requests
@@ -47,16 +45,14 @@ model_loading = False
 #     with open(local_path, "wb") as f:
 #         f.write(resp.content)
 
-#     # Upload to Supabase
+#     # Upload new PDF
 #     with open(local_path, "rb") as f:
 #         supabase.storage.from_(BUCKET_NAME).upload(safe_name, f.read(), {"cacheControl": "3600"})
 #     logging.info(f"Uploaded PDF to Supabase bucket: {safe_name}")
-#     return local_path
 
+#     return local_path
 def download_pdf(url: str) -> str:
-    os.makedirs("pdfs", exist_ok=True)
     safe_name = make_safe_name(url)
-    local_path = os.path.join("pdfs", safe_name)
 
     # Delete any existing PDF in the bucket
     try:
@@ -67,20 +63,23 @@ def download_pdf(url: str) -> str:
     except Exception as e:
         logging.warning(f"Could not list/delete old PDFs: {e}")
 
-    # Download from original URL
+    # Download and upload in one step (no local save)
     import requests
     logging.info(f"Downloading PDF from {url}")
     resp = requests.get(url, timeout=15)
     resp.raise_for_status()
-    with open(local_path, "wb") as f:
-        f.write(resp.content)
 
-    # Upload new PDF
-    with open(local_path, "rb") as f:
-        supabase.storage.from_(BUCKET_NAME).upload(safe_name, f.read(), {"cacheControl": "3600"})
+    # Upload directly from memory
+    supabase.storage.from_(BUCKET_NAME).upload(
+        safe_name,
+        resp.content,
+        {"cacheControl": "3600", "upsert": True}
+    )
     logging.info(f"Uploaded PDF to Supabase bucket: {safe_name}")
 
-    return local_path
+    # Return public URL instead of local path
+    public_url = supabase.storage.from_(BUCKET_NAME).get_public_url(safe_name)
+    return public_url
 
 
 def _download_and_reload(pdf_url: str):
