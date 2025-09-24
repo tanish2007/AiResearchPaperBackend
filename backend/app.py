@@ -14,7 +14,7 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend-backend communication
 
 # Search endpoint
-@app.route("/search", methods=["POST"])
+@app.route("/search", methods=["POST", "OPTIONS"])
 def search_papers():
     try:
         data = request.get_json()
