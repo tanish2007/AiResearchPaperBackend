@@ -11,7 +11,12 @@ from pdf_download import *
 from rag import *
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend-backend communication
+# CORS(app)  # Enable CORS for frontend-backend communication
+CORS(app, resources={r"/*": {
+    "origins": ["http://localhost:3000", "https://yourfrontend.netlify.app"],
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type"]
+}})
 
 # Search endpoint
 @app.route("/search", methods=["POST", "OPTIONS"])
